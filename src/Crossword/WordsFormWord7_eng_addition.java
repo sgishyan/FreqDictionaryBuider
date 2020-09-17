@@ -1,0 +1,563 @@
+package Crossword;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.*;
+
+/**
+ * Created by suren on 9/29/18.
+ */
+public class WordsFormWord7_eng_addition {
+    public static final String DICTIONARY_FILENAME_RUS_EASY = "/home/suren/Documents/languages/Russian/rusRes.txt";
+    public static final String DICTIONARY_FILENAME_RUS_HARD = "/home/suren/Documents/languages/Russian/hard_final.txt";
+    public static final String DICTIONARY_FILENAME_RUS_WM = "/home/suren/Documents/languages/Russian/russian_wm_cleared.txt";
+    public static final String DICTIONARY_FILENAME_SPA = "/home/suren/Documents/languages/Spanish/spanishDictionary_38.txt";
+    public static final String DICTIONARY_FILENAME_RUS_7medium = "/home/suren/Documents/languages/Russian/medium7.txt";
+    public static final String DICTIONARY_FILENAME_GEO = "/home/suren/Documents/languages/Georgian/georgianCleared.txt";
+    public static final String DICTIONARY_FILENAME_ENG_HARD = "/home/suren/Documents/languages/English/dictionary_hard.txt";
+    public static final String DICTIONARY_FILENAME_ENG_EXT = "/home/suren/Documents/languages/English/engAllRes.txt";
+
+    private static final int SHUFFLE_ITERATIONS = 1;
+    private static final int SEED_SHUFFLES = 1;
+    private ArrayList<String> dictionary;
+    private ArrayList<String> seedDictionary;
+    private ArrayList<String> availableWords;
+    private LinkedList<String> usedSeeds;
+    private Queue<String> usedWords;
+    private ArrayList<Crossword> crosswords = new ArrayList<>();
+    private ArrayList<Crossword> temp = new ArrayList<>();
+    private ArrayList<Crossword> sequence = new ArrayList<>();
+    private ArrayList<Crossword> bestSequence = new ArrayList<>();
+    private ArrayList<Crossword> globalBestSequence = new ArrayList<>();
+
+    public static final int SEED_LENGTH = 7;
+    public static final int MIN_COUNT = 11;
+    public static final int COUNT = 1750;
+    public static final int QUEUE_SIZE = 400;
+
+    public static void main(String[] args) throws IOException {
+        WordsFormWord7_eng_addition w = new WordsFormWord7_eng_addition();
+    }
+
+    public WordsFormWord7_eng_addition() throws IOException {
+
+
+
+        usedSeeds = usedSeedWords("/home/suren/Documents/temp/crossword/levels_eng");
+        System.out.println("---------------------------------------------------");
+        System.out.println("---------USED SEEDS");
+        TreeSet<String> seeds = new TreeSet<>();
+
+        for (String s : usedSeeds) {
+            if (seeds.contains(s) ) {
+                System.out.println("----------------ALARM----------");
+                System.out.println(s);
+            }
+           // System.out.println(s);
+        }
+
+        System.out.println("-------------------CHECK DONE-------------------------");
+
+        dictionary = readFile(DICTIONARY_FILENAME_ENG_EXT);
+        seedDictionary = readFile(DICTIONARY_FILENAME_ENG_EXT);
+        usedWords = usedWords("/home/suren/Documents/temp/crossword/levels_eng/10.4");
+        int globalBestDistance = 0;
+        ArrayList<String> seedWords = new ArrayList<>();
+        Map<String, Integer> wordFrequency = new HashMap<>();
+
+
+        for (int shuffleIteration = 0; shuffleIteration < SEED_SHUFFLES; shuffleIteration++) {
+
+            System.out.println("SEED SHUFFLE " + shuffleIteration);
+            Collections.shuffle(seedDictionary);
+            seedWords.clear();
+            wordFrequency.clear();
+            temp.clear();
+            usedWords = usedWords("/home/suren/Documents/temp/crossword/levels_eng/3");
+            crosswords.clear();
+
+
+            for (int index = 0; index < seedDictionary.size(); index++) {
+                System.out.println(index);
+                boolean tooClose = true ;
+                boolean isFound = false ;
+
+                for (int element = index; element < seedDictionary.size(); element++) {
+                    String seed = seedDictionary.get(element);
+
+                    if (seed.length() != SEED_LENGTH) {
+                        continue;
+                    }
+
+
+                    if (usedSeeds.contains(seed)) {
+                        continue;
+                    }
+
+                    for (String exist : seedWords) {
+                        if (isAnagram(exist, seed)) {
+                            // System.out.println("Anagram " + exist + " " + seed);
+                            continue;
+                        }
+                    }
+
+                    tooClose = false;
+                    for (int seqIndex = seedWords.size() - 1; seqIndex >= ((seedWords.size() > 4) ? seedWords.size() - 4+50 : 0); seqIndex--) {
+                        String seqWord = seedWords.get(seqIndex);
+                        //System.out.println(sequence.size() - 3 + " " + seqIndex);
+                        if (getDistance(seed, seqWord) < seqWord.length() - 2) {
+                            tooClose = true;
+                            // System.out.println("Too Close: " + seqWord);
+                            break;
+                        }
+                    }
+
+                    if (tooClose) {
+                        continue;
+                    }
+
+                    availableWords = checkLetters(seed.trim().toCharArray());
+                    if (!availableWords.contains(seed)) {
+                        availableWords.add(seed);
+                    }
+                    Iterator<String> iterator = availableWords.iterator();
+
+                    while (iterator.hasNext()) {
+                        String available = iterator.next();
+                        //Removing plurals
+                        if (available.endsWith("es")) {
+                            String singular = available.substring(0, available.length() - 2);
+                            if (availableWords.contains(singular)) {
+                                System.out.println("Removing plural");
+                                System.out.println(singular + " " + available);
+                                iterator.remove();
+                                continue;
+                            }
+                        }
+                        if (available.endsWith("s")) {
+                            String singular = available.substring(0, available.length() - 1);
+                            if (availableWords.contains(singular)) {
+                                System.out.println("Removing plural");
+                                System.out.println(singular + " " + available);
+                                iterator.remove();
+                                continue;
+                            }
+                        }
+
+                        //Removing perfect tenses
+                        if (available.endsWith("ed")) {
+                            String singular = available.substring(0, available.length() - 2);
+                            if (availableWords.contains(singular)) {
+                                System.out.println("Removing plural");
+                                System.out.println(singular + " " + available);
+                                iterator.remove();
+                                continue;
+                            }
+                        }
+
+                        if (usedWords.contains(available)) {
+                            iterator.remove();
+                        }
+                    }
+
+                    if (availableWords.size() < MIN_COUNT) {
+                        continue;
+                    }
+
+
+                    Collections.sort(availableWords, new Comparator<String>() {
+                        @Override
+                        public int compare(String s1, String s2) {
+                            return s2.length() - s1.length();// comparision
+                        }
+                    });
+
+                    Crossword best = null;
+                    Iterations:
+                    for (int i = 0; i < 100; i++) {
+                        Crossword crossword = new Crossword(dictionary, availableWords, seed);
+
+                        for (String a : availableWords) {
+                            crossword.placeWord(a);
+                        }
+                        if (crossword.getPlacedWordsCount() < MIN_COUNT) {
+                            continue;
+                        }
+
+
+                        if (best == null || best.getPlacedWordsCount() < crossword.getPlacedWordsCount()) {
+                                best = crossword;
+                            } else if (best.getPlacedWordsCount() == crossword.getPlacedWordsCount() && best.getTableSize() > crossword.getTableSize()) {
+                                best = crossword;
+                        }
+                    }
+
+                    if (best == null) {
+                        continue;
+                    }
+
+
+                    seedWords.add(seed);
+                    //best.print();
+                    for (FixedWord fixedWord : best.getPlacedWords()) {
+                        usedWords.add(fixedWord.getWord());
+                    }
+                    //System.out.println("Used Size " + usedWords.size() );
+                    if (usedWords.size() > QUEUE_SIZE) {
+                        int numberToDelete = usedWords.size() - QUEUE_SIZE;
+                        for (int i = 0; i < numberToDelete; i++) {
+                            usedWords.remove();
+                        }
+                    }
+                    crosswords.add(best);
+                    // best.writePuzzle("/home/suren/Documents/temp/crossword/levels_rus/5", levelNum );
+                    availableWords.clear();
+                    Collections.swap(seedDictionary, index, element);
+                    isFound = true;
+                    break;
+                }
+                if (!isFound) {
+                    break;
+                }
+                if (crosswords.size() >= COUNT) {
+                    break;
+                }
+
+
+            }
+
+            if (crosswords.size() < COUNT) {
+                System.out.println("Size " + crosswords.size());
+                shuffleIteration--;
+                continue;
+            }
+            System.out.println("Size " + crosswords.size());
+          //  System.out.println("Crosswords Count : " + crosswords.size());
+
+            wordFrequency.clear();
+            for (Crossword cr : sequence) {
+                for (FixedWord fixed : cr.getPlacedWords()) {
+                    String str = fixed.getWord();
+                    if (wordFrequency.containsKey(str)) {
+                        wordFrequency.put(str, wordFrequency.get(str) + 1);
+                    } else {
+                        wordFrequency.put(str, 1);
+                    }
+                }
+            }
+        }
+
+
+
+        int counter = 1;
+        int total = 1;
+        int level = 1;
+
+        wordFrequency.clear();
+        int[]  levelsPerPack = {3, 5, 10, 15, 15, 15, 20, 20, 20, 20, 20, 20, 20, 20, 20, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25};
+        int countryIterator = 10;
+        int packLevels = 1;
+        int pack = 1;
+        for (Crossword cr : crosswords) {
+
+
+            for(FixedWord fixed : cr.getPlacedWords()) {
+                String str = fixed.getWord();
+                System.out.println(str);
+                if (wordFrequency.containsKey(str)) {
+                    wordFrequency.put(str, wordFrequency.get(str) + 1);
+                } else {
+                    wordFrequency.put(str, 1);
+                }
+            }
+            cr.print();
+
+            cr.writePuzzle("/home/suren/Documents/temp/crossword/levels_eng/" + (countryIterator+1) + "." + pack + "/" , packLevels );
+            System.out.println(pack + "/" + packLevels);
+            packLevels++;
+            System.out.println("Pack Levels " + packLevels);
+            System.out.println("Pack iterator " +levelsPerPack[countryIterator] );
+            if (packLevels > levelsPerPack[countryIterator]) {
+                pack++;
+                packLevels = 1;
+                if (pack > 5) {
+                    pack = 1;
+                    countryIterator++;
+                }
+            }
+
+
+
+
+
+//            if (total <= 20) {
+//                total++;
+//                cr.writePuzzle("/home/suren/Documents/temp/crossword/levels_rus/Pack2/Dish" + counter + "/" , level );
+//                level++;
+//                if ((level - 1) % 5 == 0) {
+//                    counter++;
+//                    if (counter == 5) {
+//                        counter = 1;
+//                    }
+//                    level = 1;
+//                }
+//            } else {
+//
+//                cr.writePuzzle("/home/suren/Documents/temp/crossword/levels_rus/Pack3/Dish" + counter + "/", level);
+//                level++;
+//                if ((level - 1) % 10 == 0) {
+//                    level = 1;
+//                    counter++;
+//                    if (counter == 5) {
+//                        counter = 1;
+//                    }
+//                }
+//
+//            }
+//            System.out.println(cr.getSeedWord());
+
+        }
+
+        Map.Entry<String, Integer> maxEntry = null;
+
+        for (Map.Entry<String, Integer> entry : wordFrequency.entrySet())
+        {
+            if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0)
+            {
+                maxEntry = entry;
+            }
+        }
+//        System.out.println("Max Entry : " + maxEntry.getKey() + " " + maxEntry.getValue());
+     //   System.out.println("Total Words used : " + wordFrequency.values().size());
+        
+
+
+
+    }
+    private static int getDistance(String currentString, String s) {
+        int sameCharacters = 0;
+        boolean[] used1 = new boolean[currentString.length()];
+        boolean[] used2 = new boolean[currentString.length()];
+        for (int i = 0; i < currentString.length(); i++) {
+            for (int j = 0; j < s.length(); j++) {
+                if (currentString.charAt(i) == s.charAt(j) && used1[i] == false && used2[j] == false) {
+                    sameCharacters++;
+                    used1[i] = true;
+                    used2[j] = true;
+                    break;
+                }
+            }
+        }
+        return currentString.length() - sameCharacters;
+    }
+
+    public static boolean isAnagram(String a, String b) {
+        Map<Character, Integer> appear = new HashMap<>();
+        if (a.length() != b.length()) {
+            return false;
+        }
+        for (int i = 0; i < a.length(); i++) {
+            char symbol = a.charAt(i);
+            if (appear.containsKey(symbol)) {
+                appear.put(symbol, appear.get(symbol) + 1);
+            }else {
+                appear.put(symbol, 1);
+            }
+        }
+
+        for (int i = 0; i < b.length(); i++) {
+            char symbol = b.charAt(i);
+            if (appear.containsKey(symbol)) {
+                appear.put(symbol, appear.get(symbol) - 1);
+            }else {
+                return false;
+            }
+        }
+
+        for (Character str : appear.keySet()) {
+            if (appear.get(str) != 0) {
+                return false;
+            }
+        }
+        return true;
+
+    }
+
+    private  ArrayList<String> readFile(String englishFile) throws IOException {
+        BufferedReader dic1 = new BufferedReader(new FileReader(englishFile));
+        ArrayList<String> words = new ArrayList<String>();
+        ArrayList<String> t3 = new ArrayList<>();
+        int three = 0;
+        try {
+
+            String line = dic1.readLine();
+            while (line != null) {
+                String word = line.trim();
+                if (word.length() < 3) {
+                   // System.out.println("Too short : " + word);
+                    line = dic1.readLine();
+                    continue;
+                }
+                if (Character.isUpperCase(word.charAt(0))) {
+                    // System.out.println("Too short : " + word);
+                    line = dic1.readLine();
+                    continue;
+                }
+                if (words.contains(word)) {
+                   // System.out.println("Duplicate : " + word);
+                }else {
+                    words.add(word.toLowerCase());
+                }
+                if (word.length() == 3) {
+                    //System.out.println("3 letter : " + word);
+                    t3.add(word);
+                    three++;
+                }
+                line = dic1.readLine();
+            }
+            //System.out.println("Total 3 letters " + three);
+//            for(String w : t3) {
+//                ArrayList<String > wordsFrom3 = checkLetters(w.toCharArray());
+//                System.out.println(w  + " " + wordsFrom3.size());
+//                if (wordsFrom3.size() > 1) {
+//
+//                    for (String word : wordsFrom3) {
+//                        System.out.println(word);
+//                        dictionary.remove(word);
+//                    }
+//                }
+//
+//            }
+        } finally {
+            dic1.close();
+            return words;
+        }
+    }
+
+
+    private ArrayList<String> checkLetters(char[] letters) {
+
+        ArrayList<String> currentWords = new ArrayList<String>();
+
+        int counter = 0;
+        for (String word : dictionary) {
+            boolean[] usedLetters = {false, false, false, false, false, false, false,false};
+            counter = 0;
+            for (int i = 0; i < word.length(); i++)
+                innerLoop:
+                        for (int j = 0; j < letters.length; j++) {
+                            if (word.charAt(i) == letters[j] && usedLetters[j] == false) {
+                                usedLetters[j] = true;
+                                counter++;
+                                break innerLoop;
+                            }
+                        }
+            if (counter == word.length()) {
+                currentWords.add(word);
+            }
+        }
+
+        return currentWords;
+    }
+
+    private static LinkedList<String> readLevelWords(String level) throws IOException {
+        // System.out.println(level);
+        BufferedReader dic1 = new BufferedReader(new FileReader(level));
+        LinkedList<String> words = new LinkedList<String>();
+        try {
+
+            //Reading board size
+            String line = dic1.readLine();
+            int boardSize = Integer.parseInt(line);
+
+            //Reading crossword
+            for(int i = 0; i < boardSize; i++) {
+                line = dic1.readLine();
+            }
+
+            //Reading seed word
+            line = dic1.readLine();
+
+            //Reading level words count
+            line = dic1.readLine();
+            int levelWordsCount = Integer.parseInt(line);
+
+            for(int i = 0; i < levelWordsCount; i++) {
+
+                line = dic1.readLine();
+                words.add(line);
+                line = dic1.readLine();
+            }
+        } finally {
+            dic1.close();
+            return words;
+        }
+    }
+
+    private  LinkedList<String> usedWords(String root) {
+        LinkedList<String> used = new LinkedList<>();
+        File rootFolder = new File (root);
+        for (File inner : rootFolder.listFiles()) {
+            if (!inner.isDirectory()) {
+                try {
+                    if (!inner.getName().contains("~")) {
+                        used.addAll(readLevelWords(inner.getAbsolutePath()));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                used.addAll(usedWords(inner.getAbsolutePath()));
+            }
+        }
+        return used;
+    }
+
+    private static String readLevelSeedWords(String level) throws IOException {
+        // System.out.println(level);
+        BufferedReader dic1 = new BufferedReader(new FileReader(level));
+        LinkedList<String> words = new LinkedList<String>();
+        try {
+
+            //Reading board size
+            String line = dic1.readLine();
+            int boardSize = Integer.parseInt(line);
+
+            //Reading crossword
+            for(int i = 0; i < boardSize; i++) {
+                line = dic1.readLine();
+            }
+
+            //Reading seed word
+            line = dic1.readLine();
+            return line;
+
+        } finally {
+            dic1.close();
+        }
+    }
+
+    private  LinkedList<String> usedSeedWords(String root) {
+        LinkedList<String> used = new LinkedList<>();
+        File rootFolder = new File (root);
+        for (File inner : rootFolder.listFiles()) {
+            if (!inner.isDirectory()) {
+                try {
+                    if (!inner.getName().contains("~")) {
+                        used.add(readLevelSeedWords(inner.getAbsolutePath()));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                used.addAll(usedSeedWords(inner.getAbsolutePath()));
+            }
+        }
+        return used;
+    }
+}
+
+
+
