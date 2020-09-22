@@ -326,9 +326,11 @@ public class CanvasPanel
                 isFrozen[j][i] = Boolean.parseBoolean( level.get((height* width + i * width + j + 2)));
             }
         }
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                isRotatable[j][i] = Boolean.parseBoolean( level.get((2 * height* width + i * width + j + 2)));
+        if (level.size() >=  3 * height* width ) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    isRotatable[j][i] = Boolean.parseBoolean(level.get((2 * height * width + i * width + j + 2)));
+                }
             }
         }
         repaint();
