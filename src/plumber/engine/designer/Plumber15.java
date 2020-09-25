@@ -6,6 +6,7 @@ import plumber.engine.Tubes;
 import plumber.engine.WaterPathSegment;
 import plumber.engine.models.PlumberModel15;
 
+import javax.sound.midi.Soundbank;
 import java.io.*;
 import java.util.*;
 
@@ -13,6 +14,8 @@ import java.util.*;
  * Created by suren on 4/1/20.
  */
 public class Plumber15 {
+
+
 
     Set<String> allStates = new TreeSet<>();
     Queue<State> queue = new LinkedList<>();
@@ -129,6 +132,79 @@ public class Plumber15 {
         public int depth;
         public int hashCode = 0;
         public String trace;
+
+         public static final int[] elements_unique_rotations = {2, 4, 1, 2, 4, 4, 1, 1, 1};
+         public static final int[] elements_unique_rotations2 = {4, 4, 4, 4, 4, 4, 4};
+         public static final int[] elements_unique_rotations3 = {4, 4, 4, 1, 1, 2, 4};
+
+        public void rotateClockwise(int count) {
+            int [][] boardNew = new int[size][size];
+
+            boolean [][] frozenNew = new boolean[size][size];
+            boolean [][] rotatableNew = new boolean[size][size];
+            ArrayList<Move15> movesNew = new ArrayList<>();
+
+
+            for(int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    frozenNew[j] [size - i - 1] = frozen[i][j];
+                    rotatableNew[j] [size - i - 1] = rotatable[i][j];
+                    int element = board[i][j] / 10;
+                    int rotation = board[i][j] % 10;
+                    if (element < 10) {
+                        rotation = (rotation + 1) % elements_unique_rotations[(element - 1)];
+                    }else {
+                        if (element == 10){
+                            rotation = (rotation + 1) % elements_unique_rotations2[(0)];
+                        }
+                        if (element/ 100 == 11) {
+                            rotation = (rotation + 1) % elements_unique_rotations2[(1)];
+                            //   System.out.println(rotation);
+                        }
+                        if (element == 51 || element == 52 || element == 53) {
+                            rotation = (rotation + 1) % elements_unique_rotations2[(4)];
+                            // System.out.println(rotation);
+                        }
+                        if (element == 61 || element == 62 || element == 63) {
+                            rotation = (rotation + 1) % elements_unique_rotations3[(0)];
+                            //  System.out.println(rotation);
+                        }
+                    }
+                    boardNew[j][size - i - 1] = (10 * element + rotation);
+                }
+            }
+
+            for (int i = 0; i < moves.size(); i++) {
+                Move15 move = moves.get(i);
+                int newDx = 0;
+                int newDy = 0;
+
+                if (move.dx == 0 && move.dy == 1 ) {
+                    newDx = 1;
+                    newDy = 0;
+                }
+                if (move.dx == 1 && move.dy == 0 ) {
+                    newDx = 0;
+                    newDy = -1;
+                }
+                if (move.dx == 0 && move.dy == -1 ) {
+                    newDx = -1;
+                    newDy = 0;
+                }
+                if (move.dx ==-1 && move.dy == 0 ) {
+                    newDx = 0;
+                    newDy = 1;
+                }
+
+
+                Move15 newMove = new Move15(move.y, size - move.x - 1, newDx, newDy );
+            }
+            board = boardNew;
+            rotatable = rotatableNew;
+            frozen = frozenNew;
+            moves = movesNew;
+
+        }
 
         public State(int[][] board, boolean[][] f, boolean[][] r, int size) {
             this.size = size;
@@ -497,6 +573,20 @@ public class Plumber15 {
         }
     }
 
+    public Plumber15(State state) {
+        startState = state;
+        for (int i = 0; i< state.size;i++) {
+            for (int j = 0; j < state.size; j++) {
+                int v = state.board[i][j];
+                if ( (v >= 50 && v < 60) || (v >=500 && v < 600)) {
+                    valve = new Pair<>(i, j);
+                }
+
+            }
+        }
+
+    }
+
     public Plumber15(int[][] board, boolean[][] frozen, boolean[][] rotatable, int size) {
         startState = new State(board, frozen, rotatable, size);
         for (int i = 0; i< size;i++) {
@@ -519,7 +609,18 @@ public class Plumber15 {
         allStates.add(startState.trace);
         queue.clear();
         queue.add(startState);
-        getAllStates(depth);
+        getAllStates(depth, null);
+    }
+
+    public void printStateAtDepth(int depth, String path,boolean needRotation) {
+        allStates.clear();
+        allStates.add(startState.trace);
+        queue.clear();
+        if (needRotation) {
+            startState.rotateClockwise(1);
+        }
+        queue.add(startState);
+        getAllStates(depth, path);
     }
 
     public int fullInfo() {
@@ -527,7 +628,7 @@ public class Plumber15 {
         queue.clear();
         allStates.add(startState.trace);
         queue.add(startState);
-        getAllStates(-1);
+        getAllStates(-1, null);
         //System.out.println("total states : " + allStates.size() );
         //Finding deepest state
         int max = 0;
@@ -613,7 +714,7 @@ public class Plumber15 {
         return getStateAtDepth(nextState, depth - 1);
     }
 
-    private void getAllStates(int depth) {
+    private void getAllStates(int depth, String outputPath) {
 
         State state = null;
         boolean needMoves = depth != -1;
@@ -649,7 +750,11 @@ public class Plumber15 {
                 Random random = new Random();
                 int index = random.nextInt(candidates.size());
                 State solution = candidates.get(index);
-                printSolution(solution);
+                if (outputPath == null) {
+                    printSolution(solution);
+                }else {
+                    writeSolution(outputPath, solution);
+                }
                 return;
             }
 //
@@ -1173,6 +1278,73 @@ public class Plumber15 {
         Plumber15 gen = new Plumber15();
 
     }
+
+    public void writeSolution(String filename, State state) {
+
+        File file = new File(filename);
+        BufferedWriter output = null;
+        try {
+            output = new BufferedWriter(new FileWriter(file));
+            output.write((state.moves.size() + "\n"));
+            output.write(state.size +"\n");
+            output.write(state.size +"\n");
+            for (int i = 0; i < state.size; i++) {
+                for (int j = 0; j < state.size; j++) {
+                    output.write(state.board[i][j] +"\n");
+                }
+            }
+            int frozenCount = 0;
+            int rotatableCount = 0;
+            for (int i = 0; i < state.size; i++) {
+                for (int j = 0; j < state.size; j++) {
+                    if (state.frozen[i][j]) {
+                        frozenCount++;
+                    }
+                    if (state.rotatable[i][j]) {
+                        rotatableCount++;
+                    }
+                }
+            }
+            output.write(frozenCount+ "\n");
+            for (int i = 0; i < state.size; i++) {
+                for (int j = 0; j < state.size; j++) {
+                    if (state.frozen[i][j]) {
+                        output.write(i + " " + j + "\n");
+                    }
+                }
+            }
+            output.write(rotatableCount+ "\n");
+            for (int i = 0; i < state.size; i++) {
+                for (int j = 0; j < state.size; j++) {
+                    if (state.rotatable[i][j]) {
+                        output.write(i + " " + j + "\n");
+                    }
+                }
+            }
+
+
+            output.write(state.moves.size()+ "\n");
+                for (int i = state.moves.size() - 1; i >=0; i--) {
+                    output.write(state.moves.get(i).x + " " +
+                            state.moves.get(i).y + " " +
+                            state.moves.get(i).dx + " " +
+                            state.moves.get(i).dy + "\n");
+                }
+
+
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            output.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
     public void writeToFile(String filename, State solution) {
         File file = new File(filename);
