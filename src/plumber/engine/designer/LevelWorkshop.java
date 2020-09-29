@@ -23,6 +23,43 @@ public class LevelWorkshop {
         makeTasks(tasks);
     }
 
+    public static void fileRenamer() throws IOException {
+        String renameTasksPath = "C:\\Users\\sgish\\OneDrive\\Documents\\rotate\\5x5\\tasks.txt";
+        System.out.println("Rename Task Reading...");
+
+        ArrayList<Task> tasks = readRenameTasks(renameTasksPath);
+        System.out.println("Read " + tasks.size() + " tasks");
+        makeTasks(tasks);
+    }
+
+    private static ArrayList<Task> readRenameTasks(String renameTasksPath) throws IOException {
+        ArrayList<Task> tasks = new ArrayList<>();
+        BufferedReader dic1 = new BufferedReader(new FileReader(renameTasksPath));
+        try {
+
+            String line = dic1.readLine();
+            while (line != null) {
+
+                line = line.trim();
+                String[] tokens = line.split(" ");
+
+                String template = tokens[0];
+                String outputEasy = tokens[1];
+                String outputHard = tokens[2];
+
+                int easy = Integer.parseInt(tokens[3]);
+                int hard = Integer.parseInt((tokens[4]));
+
+                Task task = new Task(template, outputEasy, outputHard, easy, hard, true);
+                tasks.add(task);
+                line = dic1.readLine();
+            }
+        } finally {
+            dic1.close();
+            return tasks;
+        }
+    }
+
     public static void makeTasks(ArrayList<Task> tasks) {
         for(Task task : tasks) {
             System.out.println("Performing task " + task.templatePath);

@@ -2,7 +2,7 @@ package BallSort;
 
 import org.w3c.dom.ls.LSOutput;
 
-import java.util.Random;
+import java.util.*;
 
 public class Game {
     public int colors;
@@ -10,6 +10,9 @@ public class Game {
     public int width;
     public int height;
     public Random rand;
+    HashSet<State> states = new HashSet<>();
+    Queue<State> queue = new LinkedList<>();
+
 
     public Game(int colors, int height) {
         this.colors = colors;
@@ -26,6 +29,14 @@ public class Game {
         }
         rand = new Random();
     }
+    public Game(State state) {
+        this.colors = state.width - 2;
+        this.height = state.height;
+        this.width = state.width;
+        flasks = new Flask[width];
+      
+        rand = new Random();
+    }
 
     public void printBoard() {
         for (int i = 0; i < height;i++) {
@@ -38,6 +49,9 @@ public class Game {
 
     }
 
+    public void getAllStates() {
+
+    }
     public void makeReverseMove() {
         while(true){
             int ball;
@@ -71,5 +85,46 @@ public class Game {
             game.printBoard();
         }
 
+    }
+
+    static class State implements Comparable<State> {
+        int height;
+        int width;
+        int[][] board;
+        String stringBoard;
+
+        public State(int height, int width, int[][] board) {
+            this.height = height;
+            this.width = width;
+            StringBuilder sb = new StringBuilder();
+            this.board = new int[height][width];
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    this.board[i][j] = board[i][j];
+                    sb.append(board[i][j]);
+                }
+            }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            State state = (State) o;
+            return height == state.height &&
+                    width == state.width &&
+                    Arrays.equals(board, state.board) &&
+                    stringBoard.equals(state.stringBoard);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(stringBoard);
+        }
+
+        @Override
+        public int compareTo(State state) {
+            return stringBoard.compareTo(state.stringBoard);
+        }
     }
 }
