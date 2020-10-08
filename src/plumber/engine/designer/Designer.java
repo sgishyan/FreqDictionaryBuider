@@ -14,8 +14,8 @@ import java.util.logging.Logger;
 import javax.swing.*;
 
 public class Designer extends javax.swing.JFrame {
-    private static final int BOARD_HEIGHT = 5;
-    private static final int BOARD_WIDTH = 5;
+    private static final int BOARD_HEIGHT = 4;
+    private static final int BOARD_WIDTH = 4;
     private JPanel canvasPanel;
     private JTextArea textArea;
     private JButton startButton;

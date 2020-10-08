@@ -225,6 +225,28 @@ public class Plumber15 {
             trace = tr.toString();
         }
 
+         public State(int[][] board, boolean[][] f, boolean[][] r, ArrayList<Move15> movesList, int size) {
+             this.size = size;
+             this.depth = 0;
+             frozen = f;
+             rotatable = r;
+             moves = new ArrayList<>();
+             this.board = new int[size][size];
+             StringBuilder tr = new StringBuilder();
+
+             for (int i = 0; i < size; i++) {
+                 for (int j = 0; j < size; j++) {
+                     this.board[i][j] = board[i][j];
+                     // hashCode += (i * 31 + j* 13) * board[i][j];
+                     tr.append(board[i][j]);
+                 }
+             }
+             for (int i = 0; i < movesList.size(); i++) {
+                 moves.add(new Move15(movesList.get(i).x, movesList.get(i).y,movesList.get(i).dx, movesList.get(i).dy));
+             }
+             trace = tr.toString();
+         }
+
         //Rotate Constructor
          public State(State state, int x, int y, boolean needMoves) {
              size = state.size;
@@ -460,11 +482,11 @@ public class Plumber15 {
 
         }
 
-        private static class Move15 {
+        static class Move15 {
             public int dx;
             public int dy;
-            int x;
-            int y;
+            public int x;
+            public int y;
 
             public Move15(int x, int y, int dx, int dy) {
                 this.x = x;

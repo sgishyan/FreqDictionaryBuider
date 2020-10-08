@@ -15,8 +15,8 @@ import javax.swing.JPanel;
 
 public class CanvasPanel
         extends JPanel {
-    private static final int BOARD_HEIGHT = 5      ;
-    private static final int BOARD_WIDTH = 5;
+    private static final int BOARD_HEIGHT = 4;
+    private static final int BOARD_WIDTH = 4;
     private static int TOOLS_WIDTH = 7;
     private final int[] elements_unique_rotations = {2, 4, 1, 2, 4, 4, 1};
     private final int[] elements_unique_rotations2 = {4, 4, 4, 4, 4, 4, 4};
